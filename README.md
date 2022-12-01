@@ -1,2 +1,2 @@
 # nagsm
-street fighter game with X86 assembly 
+X86 assembly
