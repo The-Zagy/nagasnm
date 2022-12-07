@@ -1,37 +1,33 @@
-## what each line in the template means
-```c++
-.386
-.model flat,stdcall
-.stack 4096
-ExitProcess proto,dwExitCode:dword
-.data
-	; your variables here
-.code
 
-main PROC
-	; your code here
+# NAGSM
 
-	invoke ExitProcess, 0
-main ENDP
-END main
-```
-```
-Line 1 contains the .386 directive, which identifies this as a 32-bit program that can access
- 32-bit registers and addresses.
+## How to run
 
-Line 2 selects the program’s memory model (flat), and identifies
- the calling convention (named stdcall) for procedures. We use this because 32-bit
-Windows services require the stdcall convention to be used
+ 1. #### You'll need some sort of virual machine to run 16 bit stuff. [DOSBOX](https://www.dosbox.com/) is intutive and easy to use
+ 2. #### You'll need an assembler to make an executable out of your .asm file we use **MASM** you can download the assembler from [here](https://drive.google.com/drive/folders/1akM4UNg6StiVE3ehzEstOgOhEw1JBxA0) 
 
-Line 3 sets aside 4096 bytes of storage for the runtime stack, which every program
- must have.
 
-Line 4 declares a prototype for the ExitProcess function, which is a standard Windows service
+paste the assembler in your project folder for simplicity.
+after downloading and installing **DOSBOX**, run it and mount the project folder by typing
 
-A prototype consists of the function name, the PROTO keyword, a comma, and a list of
- input parameters. The input parameter for ExitProcess is named dwExitCode.
+    mount c c:\<PATH_OF_THE_PROJECT>
+then type
+	
 
-Line 17 uses the end directive to mark the last
- line to be assembled, and it identifies the program entry point (main). The label main was
-declared on Line 10, and it marks the address at which the program will begin to execute.
-```
+    c:
+you're now in directory of the project in the virutal machine, to make sure that your are you can type 
+
+    dir
+and a list of the files and folders in the directory will be printed in the console.
+if it doesn't make sure you replicated the previous steps correctly
+
+now assemble the .asm file by typing
+
+    masm /a <FILE_NAME>.asm
+
+Link it by typing
+
+    link <THE_NAME_OF_THE_OBJ_YOU_CHOSE>
+
+and you now have an executable of your assembly
+simply type its name in the console and it will start running
