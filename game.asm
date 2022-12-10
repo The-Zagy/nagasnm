@@ -11,11 +11,12 @@ DATA SEGMENT PARA 'DATA'
 	CAR_DX DW ?
 	CAR_DY DW ?
 	FLIP DB 0
-	COLOR DB ?
+	COLOR DB 04H     						; set car color in frame 1
 	GRASS_BLOCK_WIDTH DW 0030h
 	GRASS_BLOCK_HEIGHT DW 00C8h
-	PLAYER_CAR_WIDTH DW 020h
-	PLAYER_CAR_HEIGHT DW 030h
+	PLAYER_CAR_WIDTH DW 010h
+	PLAYER_CAR_HEIGHT DW 020h
+	PLAYER_CAR_VELOCITY DW 08H
 	DELAY_TIME DW 2710h
 	TIME_AUX DB 0                        	;variable used when checking if the time has changed
 	SCORE DB 0                    	     	;(current Score)
@@ -39,10 +40,11 @@ CODE SEGMENT PARA 'CODE'
 
 		CALL SET_SCREEN
 		CALL DRAW_GRASS_BLOCKS
+		; CALL DRAW_PLAYER_CAR
 		CALL FRAME_1
 
 		;------------------------------
-		;Main game loop start
+		; Main game loop start
 		GAME_LOOP:
 			;get current system time  [CH = hour, CL = minute, DH = seconds, DL = 1/100 sec]
 			MOV AH,2Ch	
@@ -53,7 +55,8 @@ CODE SEGMENT PARA 'CODE'
 
 			EXE:
 				MOV TIME_AUX, DL
-				CALL DRAW_CARS
+				CALL MOVE_CAR
+				; CALL DRAW_CARS
 				JMP GAME_LOOP
 		;-----------------------------			
 		
@@ -223,6 +226,85 @@ CODE SEGMENT PARA 'CODE'
 		INT 21h
 
 	CONCLUDE_EXIT_GAME ENDP
+
+	; function to remove player car by replacing it with black
+	RESET_PLAYER_CAR PROC NEAR
+	MOV COLOR, 00H ; set color to black then draw player car
+	CALL DRAW_PLAYER_CAR
+
+	RET
+	RESET_PLAYER_CAR ENDP
+
+
+
+	; function will be used to move the car position in the x-axis
+	MOVE_CAR PROC NEAR
+	; INT 16H  is used to acess keyboard bios services [AH = 01 to get keyboard status RETURN => ZF=0 if key pressed, AL=ASCII char]
+	MOV AH, 01
+	INT 16H ; EXecute to chechk if key was pressed
+	; check if any key is pressed
+	; JZ CHECK_CAR_DIRECTION ; jump if zero flag is set(1)
+	; check which key [AL will contain ascii char]
+	MOV AH, 00h
+	INT 16H
+	; if it was 'a' or 'A' move car left WITHOUT GETTING OUT OF THE ROOD
+	CMP AL, 100 ; cmp with 'd' ascii
+	JE MOVE_RIGHT
+	CMP AL, 97  ; cmp with 'a' ascii
+	JE MOVE_LEFT
+	; if reached this line means not a correct keystrock so only leave the function
+	RET
+
+	MOVE_RIGHT:
+
+		CALL RESET_PLAYER_CAR ; remove old car from old pos
+		MOV AX, PLAYER_CAR_VELOCITY
+		ADD CAR_POS_X, AX
+		; don't break the grass
+		MOV BX, WINDOW_WIDTH
+		SUB BX, GRASS_BLOCK_WIDTH
+		SUB BX, PLAYER_CAR_WIDTH
+		CMP CAR_POS_X, BX
+		JGE CORRECT_RIGHT_POS
+		
+
+		MOV COLOR, 04H ; set color to red
+		CALL DRAW_PLAYER_CAR
+
+		RET
+	
+	MOVE_LEFT:
+		CALL RESET_PLAYER_CAR ; remove old car from old pos
+		MOV AX, PLAYER_CAR_VELOCITY
+		SUB CAR_POS_X, AX
+
+		; DON'T BREAK grass
+		MOV BX, GRASS_BLOCK_WIDTH
+		ADD BX, PLAYER_CAR_WIDTH
+		CMP CAR_POS_X, BX
+		JLE CORRECT_LEFT_POS
+
+		MOV COLOR, 04H ; set color to red
+		CALL DRAW_PLAYER_CAR
+
+		RET
+
+	CORRECT_RIGHT_POS:
+		; at this point pos_x was inc by volcity so need to dec it to be just before the grass blk
+		MOV AX, PLAYER_CAR_VELOCITY
+		SUB CAR_POS_X, AX
+		MOV COLOR, 04H ; set color to red
+		CALL DRAW_PLAYER_CAR
+		RET
+
+	CORRECT_LEFT_POS:
+		MOV AX, PLAYER_CAR_VELOCITY
+		ADD CAR_POS_X, AX
+		MOV COLOR, 04H ; set color to red
+		CALL DRAW_PLAYER_CAR
+
+	RET
+	MOVE_CAR ENDP
 
 CODE ENDS
 END
