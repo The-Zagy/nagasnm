@@ -83,12 +83,16 @@ CODE SEGMENT PARA 'CODE'
 			CMP DL, TIME_AUX				
 			JE GAME_LOOP	
 
-			MOV TIME_AUX, DL
+			MOV TIME_AUX, DL ;update time
             MOV COLOR, 00h
+
             CALL STONES
 			CALL RAND_STONES
+			
             CALL MOVE_CAR
+			CALL COLLION_STONES
 			JMP GAME_LOOP
+			
 		;-----------------------------			
 		
 		RET	
@@ -184,6 +188,7 @@ CODE SEGMENT PARA 'CODE'
 		INT 16H ; EXecute to chechk if key was pressed
 		JNZ CHECK_KEY ; jump if zero flag is not set(0)
 		RET ; if no key pressed return
+		
 		; check which key [AL will contain ascii char]
 		CHECK_KEY:
 			MOV AH, 00h
@@ -286,10 +291,10 @@ CODE SEGMENT PARA 'CODE'
         MOV DRAW_HEIGHT, AX
 
         MOV AX, STONE_1_VELOCITY
-        ADD STONE_1_Y, AX
+        ADD STONE_1_Y, AX		;increasing stones velocity
         MOV AX, STONE_1_Y
-        CMP AX, WINDOW_HEIGHT
-        JGE RESET_Y
+        CMP AX, WINDOW_HEIGHT 	; check if stone reached end of screen
+        JGE RESET_Y				; call reset stone position to top
         MOV POS_Y, AX
         MOV AX, STONE_1_X
         MOV POS_X, AX
@@ -314,7 +319,8 @@ CODE SEGMENT PARA 'CODE'
         JGE RESET_Y_3
         MOV POS_Y, AX
         CALL DRAW
-        
+         
+		
         RET
 
         RESET_Y: 
@@ -395,9 +401,95 @@ CODE SEGMENT PARA 'CODE'
         MOV AX, STONE_3_Y
         MOV POS_Y, AX
         CALL DRAW    
-        
+       CALL COLLION_STONES
 		RET
     STONES ENDP
+
+	COLLION_STONES PROC NEAR
+		;check if stones is colliding with the car
+		;maxx1 > minx2 && minx1 < maxx2 && maxy1 > miny1 && miny1 < maxy2
+		;STONE_1_X + STONE_SIZE > CAR_POS_X && STONE_1_X < CAR_POS_X + PLAYER_CAR_WIDTH 
+		;&& STONE_1_Y + STONE_SIZE > CAR_POS_Y && STONE_1_Y < CAR_POS_Y +  PLAYER_CAR_HEIGHT
+		MOV AX,STONE_1_X
+		ADD AX,STONE_SIZE
+		CMP AX,CAR_POS_X
+		JNG CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
+
+		MOV AX,CAR_POS_X
+		ADD AX,PLAYER_CAR_WIDTH
+		CMP STONE_1_X,AX
+		JNL  CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
+
+		MOV AX,STONE_1_Y
+		ADD AX,STONE_SIZE
+		CPM AX,CAR_POS_Y
+		JNG CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
+
+		MOV AX,CAR_POS_Y
+		ADD AX,PLAYER_CAR_HEIGHT
+		CPM AX,STONE_1_Y
+		JNL CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
+		
+		;if it reaches this point stone 1 is colliding with the car
+		NEG STONE_1_VELOCITY	;EXIT THE GAME 
+		RET
+		CHECK_COLLISION_WITH_STONE_2:
+		MOV AX,STONE_2_X
+		ADD AX,STONE_SIZE
+		CMP AX,CAR_POS_X
+		JNG CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
+
+		MOV AX,CAR_POS_X
+		ADD AX,PLAYER_CAR_WIDTH
+		CMP STONE_2_X,AX
+		JNL  CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
+
+		MOV AX,STONE_2_Y
+		ADD AX,STONE_SIZE
+		CPM AX,CAR_POS_Y
+		JNG CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
+
+		MOV AX,CAR_POS_Y
+		ADD AX,PLAYER_CAR_HEIGHT
+		CPM AX,STONE_2_Y
+		JNL CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
+		
+		;if it reaches this point stone 2 is colliding with the car
+		NEG STONE_2_VELOCITY	;EXIT THE GAME 
+		
+		RET
+		CHECK_COLLISION_WITH_STONE_3:
+		
+		MOV AX,STONE_3_X
+		ADD AX,STONE_SIZE
+		CMP AX,CAR_POS_X
+		JNG EXIT_COLLISION 	;if there's no collision Exit
+
+		MOV AX,CAR_POS_X
+		ADD AX,PLAYER_CAR_WIDTH
+		CMP STONE_3_X,AX
+		JNL  EXIT_COLLISION 	;if there's no collision Exit
+
+		MOV AX,STONE_3_Y
+		ADD AX,STONE_SIZE
+		CPM AX,CAR_POS_Y
+		JNG EXIT_COLLISION 	;if there's no collision Exit
+
+		MOV AX,CAR_POS_Y
+		ADD AX,PLAYER_CAR_HEIGHT
+		CPM AX,STONE_3_Y
+		JNL EXIT_COLLISION 	;if there's no collision Exit
+		
+		;if it reaches this point stone 3 is colliding with the car
+		NEG STONE_3_VELOCITY	;EXIT THE GAME 
+		
+		RET
+		EXIT_COLLISION:
+		
+		RET
+
+	RET
+	COLLION_STONES ENDP
 
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
 
