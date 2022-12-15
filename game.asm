@@ -179,20 +179,22 @@ CODE SEGMENT PARA 'CODE'
 	; function will be used to move the car position in the x-axis
 	MOVE_CAR PROC NEAR
 		; INT 16H  is used to acess keyboard bios services [AH = 01 to get keyboard status RETURN => ZF=0 if key pressed, AL=ASCII char]
+		; check if any key is pressed if no exit 
 		MOV AH, 01
 		INT 16H ; EXecute to chechk if key was pressed
-		; check if any key is pressed
-		; JZ CHECK_CAR_DIRECTION ; jump if zero flag is set(1)
+		JNZ CHECK_KEY ; jump if zero flag is not set(0)
+		RET ; if no key pressed return
 		; check which key [AL will contain ascii char]
-		MOV AH, 00h
-		INT 16H
-		; if it was 'a' or 'A' move car left WITHOUT GETTING OUT OF THE ROOD
-		CMP AL, 100 ; cmp with 'd' ascii
-		JE MOVE_RIGHT
-		CMP AL, 97  ; cmp with 'a' ascii
-		JE MOVE_LEFT
-		; if reached this line means not a correct keystrock so only leave the function
-		RET
+		CHECK_KEY:
+			MOV AH, 00h
+			INT 16H
+			; if it was 'a' or 'A' move car left WITHOUT GETTING OUT OF THE ROOD
+			CMP AL, 100 ; cmp with 'd' ascii
+			JE MOVE_RIGHT
+			CMP AL, 97  ; cmp with 'a' ascii
+			JE MOVE_LEFT
+			; if reached this line means not a correct keystrock so only leave the function
+			RET
 
 		MOVE_RIGHT:
 
