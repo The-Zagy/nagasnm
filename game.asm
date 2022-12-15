@@ -485,7 +485,7 @@ CODE SEGMENT PARA 'CODE'
 		
 		RET
 		EXIT_COLLISION:
-		
+		 
 		RET
 
 	RET
