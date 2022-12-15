@@ -31,9 +31,10 @@ DATA SEGMENT PARA 'DATA'
     STONE_1_VELOCITY DW 0004h
     STONE_2_VELOCITY DW 0006h
     STONE_3_VELOCITY DW 0003h
+	   
 
 	TIME_AUX DB 0                        	;variable used when checking if the time has changed
-	SCORE DB 0                    	     	;(current Score)
+	SCORE DB '0','$'                  	     	;(current Score)
 	CURRENT_SCENE DB 0                   	;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 
 DATA ENDS
@@ -55,6 +56,7 @@ CODE SEGMENT PARA 'CODE'
 		CALL SET_SCREEN
 		
 		CALL DRAW_GRASS_BLOCKS
+		CALL DRAW_UI
 		
 		;draw stones
         MOV COLOR, 0Fh
@@ -85,12 +87,13 @@ CODE SEGMENT PARA 'CODE'
 
 			MOV TIME_AUX, DL ;update time
             MOV COLOR, 00h
-
+			;CALL DRAW_UI
             CALL STONES
 			CALL RAND_STONES
 			
             CALL MOVE_CAR
-			CALL COLLION_STONES
+			;CALL COLLION_STONES
+			
 			JMP GAME_LOOP
 			
 		;-----------------------------			
@@ -129,6 +132,7 @@ CODE SEGMENT PARA 'CODE'
             MOV AX, DX
             SUB AX, POS_Y
             CMP AX, DRAW_HEIGHT
+			;CALL DRAW_UI
             JNG REPEAT
         RET
     DRAW ENDP
@@ -163,6 +167,24 @@ CODE SEGMENT PARA 'CODE'
 			JNG DRAW_ROW_GRASS_TWO
 		RET
 	DRAW_GRASS_BLOCKS ENDP
+
+	DRAW_UI PROC NEAR
+		
+;       Draw the points of the left player (player one)
+		
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,010h                       ;set row 
+		MOV DL,010h						 ;set column
+		MOV AL, 04h 
+		INT 10h							 
+		
+		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TIME_AUX    ;give DX a pointer to the string TEXT_PLAYER_POINTS
+		INT 21h                          ;print the string 
+		
+		RET
+	DRAW_UI ENDP
 
 	; function to remove player car by replacing it with black
 	RESET_PLAYER_CAR PROC NEAR
@@ -319,7 +341,8 @@ CODE SEGMENT PARA 'CODE'
         JGE RESET_Y_3
         MOV POS_Y, AX
         CALL DRAW
-         
+		
+         CALL COLLION_STONES
 		
         RET
 
@@ -401,7 +424,7 @@ CODE SEGMENT PARA 'CODE'
         MOV AX, STONE_3_Y
         MOV POS_Y, AX
         CALL DRAW    
-       CALL COLLION_STONES
+       
 		RET
     STONES ENDP
 
@@ -422,16 +445,16 @@ CODE SEGMENT PARA 'CODE'
 
 		MOV AX,STONE_1_Y
 		ADD AX,STONE_SIZE
-		CPM AX,CAR_POS_Y
+		CMP AX,CAR_POS_Y
 		JNG CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
 
 		MOV AX,CAR_POS_Y
 		ADD AX,PLAYER_CAR_HEIGHT
-		CPM AX,STONE_1_Y
+		CMP AX,STONE_1_Y
 		JNL CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
 		
 		;if it reaches this point stone 1 is colliding with the car
-		NEG STONE_1_VELOCITY	;EXIT THE GAME 
+		INC SCORE	;EXIT THE GAME 
 		RET
 		CHECK_COLLISION_WITH_STONE_2:
 		MOV AX,STONE_2_X
@@ -446,16 +469,16 @@ CODE SEGMENT PARA 'CODE'
 
 		MOV AX,STONE_2_Y
 		ADD AX,STONE_SIZE
-		CPM AX,CAR_POS_Y
+		CMP AX,CAR_POS_Y
 		JNG CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
 
 		MOV AX,CAR_POS_Y
 		ADD AX,PLAYER_CAR_HEIGHT
-		CPM AX,STONE_2_Y
+		CMP AX,STONE_2_Y
 		JNL CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
 		
 		;if it reaches this point stone 2 is colliding with the car
-		NEG STONE_2_VELOCITY	;EXIT THE GAME 
+		INC SCORE	;EXIT THE GAME 
 		
 		RET
 		CHECK_COLLISION_WITH_STONE_3:
@@ -472,24 +495,26 @@ CODE SEGMENT PARA 'CODE'
 
 		MOV AX,STONE_3_Y
 		ADD AX,STONE_SIZE
-		CPM AX,CAR_POS_Y
+		CMP AX,CAR_POS_Y
 		JNG EXIT_COLLISION 	;if there's no collision Exit
 
 		MOV AX,CAR_POS_Y
 		ADD AX,PLAYER_CAR_HEIGHT
-		CPM AX,STONE_3_Y
+		CMP AX,STONE_3_Y
 		JNL EXIT_COLLISION 	;if there's no collision Exit
 		
 		;if it reaches this point stone 3 is colliding with the car
-		NEG STONE_3_VELOCITY	;EXIT THE GAME 
+		INC SCORE			;EXIT THE GAME 
 		
 		RET
 		EXIT_COLLISION:
-		  
+		INC SCORE
 		RET
 
 	RET
 	COLLION_STONES ENDP
+
+
 
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
 
