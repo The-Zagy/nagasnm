@@ -35,9 +35,9 @@ DATA SEGMENT PARA 'DATA'
 
 	TIME_AUX DB 0                        	;variable used when checking if the time has changed
 	SCORE DB '0','$'                  	     	;(current Score)
-	LIVES DB "LIVES LEFT","$"
 	TEXT_GAME_OVER_TITLE DB 'GAME OVER','$' ;text with the game over menu title
 	TEXT_GAME_OVER_PLAY_AGAIN DB 'Press R to play again','$' ;text with the game over play again message
+	TEXT_SCORE DB 'SCORE','$' ;text with the game over menu title
 	POINTS DB 03h
 	GAME_ACTIVE DB 01h                     ;is the game active? (1 -> Yes, 0 -> No (game over))	
 	CURRENT_SCENE DB 0                   	;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
@@ -59,15 +59,16 @@ CODE SEGMENT PARA 'CODE'
 		;------------------------------
 
 		CALL SET_SCREEN
-		
+
 		CALL DRAW_GRASS_BLOCKS
 		
 		
 		;draw stones
         MOV COLOR, 0Fh
         CALL STONES
+		
         CALL DRAW_CAR
-       
+
 
 		;------------------------------
 		; Main game loop start
@@ -87,10 +88,9 @@ CODE SEGMENT PARA 'CODE'
 			
             CALL STONES
 			CALL RAND_STONES
-			
+			CALL DRAW_UI
             CALL MOVE_CAR
 			CALL COLLION_STONES
-			;CALL DRAW_UI
 			;CALL UPDATE_SCORE
 			JMP GAME_LOOP
 			SHOW_GAME_OVER:
@@ -191,32 +191,18 @@ CODE SEGMENT PARA 'CODE'
 	DRAW_GRASS_BLOCKS ENDP
 
 	DRAW_UI PROC NEAR
-		
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
 		MOV DH,001h                       ;set row 
-		MOV DL,015h						 ;set column
+		MOV DL,019h						 ;set column
 		MOV BL,00h
 		MOV AL, 04h 
 		INT 10h							 
-		
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,LIVES    ;give DX a pointer to the string TEXT_PLAYER_POINTS
+		LEA DX,TEXT_SCORE    ;give DX a pointer to the string TEXT_PLAYER_POINTS
 		INT 21h 
-
-		MOV AH,02h                       ;set cursor position
-		MOV BH,00h                       ;set page number
-		MOV DH,001h                       ;set row 
-		MOV DL,01Fh						 ;set column
-		MOV BL,00h
-		MOV AL, 04h 
-		INT 10h							 
-		
-		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,SCORE    ;give DX a pointer to the string TEXT_PLAYER_POINTS
-		INT 21h 
-		
-		
+		MOV AX,15
+		CALL PRINT_NUMBER
 		RET
 	DRAW_UI ENDP
 
@@ -666,6 +652,39 @@ RESET_STONE_POSITION PROC NEAR        ;restart ball position to the original pos
 		INT 21h
 
 	CONCLUDE_EXIT_GAME ENDP
+	PRINT_NUMBER PROC NEAR
+	;takes ax the number
+	mov BX, 10
+    MOV CX, 0
+	CONSTRUCT_STRING:
+    	MOV DX, 0
+    	DIV BX                          ;divide by ten
+    	; now ax <-- ax/10
+    	;     dx <-- ax % 10
+    	; print dx
+    	; this is one digit, which we have to convert to ASCII
+    	; the print routine uses dx and ax, so let's push ax
+    	; onto the stack. we clear dx at the beginning of the
+    	; loop anyway, so we don't care if we much around with it
+    	PUSH AX
+    	ADD DL, '0'                     ;convert dl to ascii
+    	POP AX                          ;restore ax
+    	PUSH DX                         ;digits are in reversed order, must use stack
+    	INC CX                          ;remember how many digits we pushed to stack
+    	CMP AX, 0                       ;if ax is zero, we can quit
+	JNZ CONSTRUCT_STRING
 
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,001h                      ;set row 
+		MOV DL,01Fh						 ;set column
+		INT 10h
+		MOV AH,2                       ;WRITE STRING TO STANDARD OUTPUT	
+	PRINT_STRING:
+    	POP DX                          ;restore digits from last to first
+    	INT 21h                         ;calls DOS Services
+    	LOOP PRINT_STRING
+    RET
+PRINT_NUMBER endp
 CODE ENDS
 END
