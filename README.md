@@ -1,11 +1,11 @@
 
 # NAGSM
 
-## WE'RE IN DEMO BABYYY LESGO
+## WE'RE IN DEMO LESGO
 
 - Main Menu  
 
-    ![menu](/assets/main_menupng.png)
+    ![menu](/assets/menu.png)
 
 - game scene ***"for now"***
 

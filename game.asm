@@ -42,7 +42,7 @@ DATA SEGMENT PARA 'DATA'
 	GAME_ACTIVE DB 01h                     ;is the game active? (1 -> Yes, 0 -> No (game over))	
 	CURRENT_SCENE DB 0                   	;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 	;----------------------------TEXT IN MAIN MENU-----------------------------
-	TEXT_MAIN_MENU_TITLE DB 'CAR IDK', '$'
+	TEXT_MAIN_MENU_TITLE DB 'NAGSM - STREET FIGHTER', '$'
 	TEXT_MAIN_MENU_NORMAL DB 'START GAME IN NORMAL MODE - PRESS 1', '$'
 	TEXT_MAIN_MENU_HARD DB 'START GAME IN HARD MODE - PRESS 2', '$'
 	TEXT_MAIN_MENU_QUIT DB 'QUIT THE GAME - PRESS Q OR q', '$'
@@ -111,6 +111,7 @@ CODE SEGMENT PARA 'CODE'
 			SHOW_MAIN_MENU:
 				CALL DRAW_GAME_MAIN_MENU
 				; after return from the menu draw required for playing scene
+				CALL SET_SCREEN
 				CALL DRAW_GRASS_BLOCKS
 				CALL DRAW_CAR
 				JMP GAME_LOOP
@@ -686,7 +687,7 @@ RESET_STONE_POSITION PROC NEAR        ;restart ball position to the original pos
 ;       Shows normal mode option
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,06h                       ;set row 
+		MOV DH,07h                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 		
@@ -696,7 +697,7 @@ RESET_STONE_POSITION PROC NEAR        ;restart ball position to the original pos
 ;       Shows hard mode option
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,08h                       ;set row 
+		MOV DH,09h                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 		
@@ -706,7 +707,7 @@ RESET_STONE_POSITION PROC NEAR        ;restart ball position to the original pos
 ;       Shows quit option
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,0Ah                       ;set row 
+		MOV DH,0Bh                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 		
@@ -726,15 +727,18 @@ RESET_STONE_POSITION PROC NEAR        ;restart ball position to the original pos
 			jmp READ_USER_INPUT ; unconditional jump to not accept any wrong input
 		; choose hard will perform both code for hard and normal, if normal only execute code for normal and keep speed at the normal[default]
 		CHANGE_TO_GAME_SCENE_HARD:
+			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
 			; the idea of hard here increase how fast the stones moves
 			MOV STONE_1_VELOCITY, 06H 
 			MOV STONE_2_VELOCITY, 08H 
 			MOV STONE_3_VELOCITY, 05H 
+			RET
 		CHANGE_TO_GAME_SCENE_NORMAL:
 			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
-
-	; after choose game mode reset screen to make it ready for other scens
-	CALL SET_SCREEN
+			; reset velocity
+			MOV STONE_1_VELOCITY, 04H 
+			MOV STONE_2_VELOCITY, 06H 
+			MOV STONE_3_VELOCITY, 03H 
 
 	RET
 	DRAW_GAME_MAIN_MENU ENDP
