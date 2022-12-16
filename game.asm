@@ -34,7 +34,8 @@ DATA SEGMENT PARA 'DATA'
 	   
 
 	TIME_AUX DB 0                        	;variable used when checking if the time has changed
-	SCORE DB '0','$'                  	     	;(current Score)
+	SCORE DB 03h,'$'                  	     	;(current Score)
+	POINTS DB 03h
 	CURRENT_SCENE DB 0                   	;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 
 DATA ENDS
@@ -56,7 +57,7 @@ CODE SEGMENT PARA 'CODE'
 		CALL SET_SCREEN
 		
 		CALL DRAW_GRASS_BLOCKS
-		CALL DRAW_UI
+		
 		
 		;draw stones
         MOV COLOR, 0Fh
@@ -87,12 +88,14 @@ CODE SEGMENT PARA 'CODE'
 
 			MOV TIME_AUX, DL ;update time
             MOV COLOR, 00h
-			;CALL DRAW_UI
+			
             CALL STONES
 			CALL RAND_STONES
 			
             CALL MOVE_CAR
-			;CALL COLLION_STONES
+			CALL COLLION_STONES
+			CALL DRAW_UI
+			;CALL UPDATE_SCORE
 			
 			JMP GAME_LOOP
 			
@@ -169,22 +172,35 @@ CODE SEGMENT PARA 'CODE'
 	DRAW_GRASS_BLOCKS ENDP
 
 	DRAW_UI PROC NEAR
-		
-;       Draw the points of the left player (player one)
+		MOV CL,POINTS
+		MOV BL,01Fh
+		CMP CL,0
+		JE GAME_OVER
+		HEART:
 		
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,010h                       ;set row 
-		MOV DL,010h						 ;set column
+		MOV DH,001h                       ;set row 
+		MOV DL,BL						 ;set column
 		MOV AL, 04h 
 		INT 10h							 
 		
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,TIME_AUX    ;give DX a pointer to the string TEXT_PLAYER_POINTS
-		INT 21h                          ;print the string 
+		LEA DX,SCORE    ;give DX a pointer to the string TEXT_PLAYER_POINTS
+		INT 21h 
+		INC BL                         ;print the string 
+		DEC CL
+		CMP CL,0
+		JNE HEART
+		
+		RET
+		GAME_OVER:
+		RET
 		
 		RET
 	DRAW_UI ENDP
+
+	
 
 	; function to remove player car by replacing it with black
 	RESET_PLAYER_CAR PROC NEAR
@@ -342,7 +358,7 @@ CODE SEGMENT PARA 'CODE'
         MOV POS_Y, AX
         CALL DRAW
 		
-         CALL COLLION_STONES
+         
 		
         RET
 
@@ -424,7 +440,7 @@ CODE SEGMENT PARA 'CODE'
         MOV AX, STONE_3_Y
         MOV POS_Y, AX
         CALL DRAW    
-       
+      
 		RET
     STONES ENDP
 
@@ -433,6 +449,7 @@ CODE SEGMENT PARA 'CODE'
 		;maxx1 > minx2 && minx1 < maxx2 && maxy1 > miny1 && miny1 < maxy2
 		;STONE_1_X + STONE_SIZE > CAR_POS_X && STONE_1_X < CAR_POS_X + PLAYER_CAR_WIDTH 
 		;&& STONE_1_Y + STONE_SIZE > CAR_POS_Y && STONE_1_Y < CAR_POS_Y +  PLAYER_CAR_HEIGHT
+		
 		MOV AX,STONE_1_X
 		ADD AX,STONE_SIZE
 		CMP AX,CAR_POS_X
@@ -449,12 +466,15 @@ CODE SEGMENT PARA 'CODE'
 		JNG CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
 
 		MOV AX,CAR_POS_Y
-		ADD AX,PLAYER_CAR_HEIGHT
+		;ADD AX,PLAYER_CAR_HEIGHT
 		CMP AX,STONE_1_Y
 		JNL CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
 		
 		;if it reaches this point stone 1 is colliding with the car
-		INC SCORE	;EXIT THE GAME 
+		;INC POINTS
+		
+		DEC POINTS 
+		
 		RET
 		CHECK_COLLISION_WITH_STONE_2:
 		MOV AX,STONE_2_X
@@ -473,12 +493,13 @@ CODE SEGMENT PARA 'CODE'
 		JNG CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
 
 		MOV AX,CAR_POS_Y
-		ADD AX,PLAYER_CAR_HEIGHT
+		;ADD AX,PLAYER_CAR_HEIGHT
 		CMP AX,STONE_2_Y
 		JNL CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
 		
 		;if it reaches this point stone 2 is colliding with the car
-		INC SCORE	;EXIT THE GAME 
+		;INC POINTS
+		DEC POINTS 
 		
 		RET
 		CHECK_COLLISION_WITH_STONE_3:
@@ -499,22 +520,39 @@ CODE SEGMENT PARA 'CODE'
 		JNG EXIT_COLLISION 	;if there's no collision Exit
 
 		MOV AX,CAR_POS_Y
-		ADD AX,PLAYER_CAR_HEIGHT
+		;ADD AX,PLAYER_CAR_HEIGHT
 		CMP AX,STONE_3_Y
 		JNL EXIT_COLLISION 	;if there's no collision Exit
 		
 		;if it reaches this point stone 3 is colliding with the car
-		INC SCORE			;EXIT THE GAME 
+		;INC POINTS
+		DEC POINTS 
 		
 		RET
 		EXIT_COLLISION:
-		INC SCORE
+		;CALL UPDATE_SCORE
 		RET
 
 	RET
 	COLLION_STONES ENDP
 
+	; UPDATE_SCORE PROC NEAR
+		
+	; 	XOR AX,AX
+	; 	;INC POINTS
+	; 	MOV AL,POINTS ;given, for example that P1 -> 2 points => AL,2
+		
+	; 	;now, before printing to the screen, we need to convert the decimal value to the ascii code character 
+	; 	;we can do this by adding 30h (number to ASCII)
+	; 	;and by subtracting 30h (ASCII to number)
+	; 	ADD AL,03h  
+	; 	MOV [SCORE],AL		;AL,'2'
+		
+		
+	; 	RET
+	; UPDATE_SCORE ENDP
 
+	
 
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
 
