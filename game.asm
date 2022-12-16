@@ -41,7 +41,13 @@ DATA SEGMENT PARA 'DATA'
 	POINTS DB 03h
 	GAME_ACTIVE DB 01h                     ;is the game active? (1 -> Yes, 0 -> No (game over))	
 	CURRENT_SCENE DB 0                   	;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
-
+	;----------------------------TEXT IN MAIN MENU-----------------------------
+	TEXT_MAIN_MENU_TITLE DB 'NAGSM - STREET FIGHTER', '$'
+	TEXT_MAIN_MENU_NORMAL DB 'START GAME IN NORMAL MODE - PRESS 1', '$'
+	TEXT_MAIN_MENU_HARD DB 'START GAME IN HARD MODE - PRESS 2', '$'
+	TEXT_MAIN_MENU_QUIT DB 'QUIT THE GAME - PRESS Q OR q', '$'
+	;---------------------------------------------------------------------------
+	
 DATA ENDS
 
 CODE SEGMENT PARA 'CODE'
@@ -73,7 +79,10 @@ CODE SEGMENT PARA 'CODE'
 		;------------------------------
 		; Main game loop start
 		GAME_LOOP:
-
+			; check current scene to decide what to show
+			CMP CURRENT_SCENE, 00H ; 00H decided to be main menu scene
+			JE SHOW_MAIN_MENU
+			; check game state to decide is the game over or not
 			CMP GAME_ACTIVE,00h
 			JE SHOW_GAME_OVER
 
@@ -99,7 +108,13 @@ CODE SEGMENT PARA 'CODE'
 				CALL DRAW_GRASS_BLOCKS
 				CALL DRAW_CAR
 				JMP GAME_LOOP
-			
+			SHOW_MAIN_MENU:
+				CALL DRAW_GAME_MAIN_MENU
+				; after return from the menu draw required for playing scene
+				CALL SET_SCREEN
+				CALL DRAW_GRASS_BLOCKS
+				CALL DRAW_CAR
+				JMP GAME_LOOP
 
 		;-----------------------------			
 		
@@ -641,7 +656,78 @@ RESET_STONE_POSITION PROC NEAR        ;restart ball position to the original pos
 
 		RET
 		DRAW_GAME_OVER_MENU ENDP
+	; function to draw main menu 
+	DRAW_GAME_MAIN_MENU PROC NEAR
+		CALL SET_SCREEN                ;clear the screen before displaying the menu
 
+;       Shows the menu title
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,04h                       ;set row 
+		MOV DL,04h						 ;set column
+		INT 10h							 
+		
+		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_MAIN_MENU_TITLE      ;give DX a pointer 
+		INT 21h  
+;       Shows normal mode option
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,07h                       ;set row 
+		MOV DL,04h						 ;set column
+		INT 10h							 
+		
+		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_MAIN_MENU_NORMAL      ;give DX a pointer 
+		INT 21h  
+;       Shows hard mode option
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,09h                       ;set row 
+		MOV DL,04h						 ;set column
+		INT 10h							 
+		
+		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_MAIN_MENU_HARD      ;give DX a pointer 
+		INT 21h  
+;       Shows quit option
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,0Bh                       ;set row 
+		MOV DL,04h						 ;set column
+		INT 10h							 
+		
+		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_MAIN_MENU_QUIT      ;give DX a pointer 
+		INT 21h  
+;       Waits for a key press
+		READ_USER_INPUT:
+			MOV AH,00h
+			INT 16h
+			; check if the key pressed is '1'
+			CMP AL, '1'
+			JE CHANGE_TO_GAME_SCENE_NORMAL
+			CMP AL, '2'
+			JE CHANGE_TO_GAME_SCENE_HARD
+			; TODO ADD CLOSE GAME LOGIC
+			jmp READ_USER_INPUT ; unconditional jump to not accept any wrong input
+		; choose hard will perform both code for hard and normal, if normal only execute code for normal and keep speed at the normal[default]
+		CHANGE_TO_GAME_SCENE_HARD:
+			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
+			; the idea of hard here increase how fast the stones moves
+			MOV STONE_1_VELOCITY, 06H 
+			MOV STONE_2_VELOCITY, 08H 
+			MOV STONE_3_VELOCITY, 05H 
+			RET
+		CHANGE_TO_GAME_SCENE_NORMAL:
+			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
+			; reset velocity
+			MOV STONE_1_VELOCITY, 04H 
+			MOV STONE_2_VELOCITY, 06H 
+			MOV STONE_3_VELOCITY, 03H 
+
+	RET
+	DRAW_GAME_MAIN_MENU ENDP
 
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
 

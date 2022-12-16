@@ -1,6 +1,16 @@
 
 # NAGSM
 
+## WE'RE IN DEMO LESGO
+
+- Main Menu  
+
+    ![menu](/assets/menu.png)
+
+- game scene ***"for now"***
+
+    ![game](/assets/game.png)
+
 ## How to run
 
  1. #### You'll need some sort of virual machine to run 16 bit stuff. [DOSBOX](https://www.dosbox.com/) is intutive and easy to use
