@@ -36,15 +36,15 @@ DATA SEGMENT PARA 'DATA'
 	   
 	TIME_AUX DB 0                        		;variable used when checking if the time has changed
 	SCORE DB '0','$'                  	     	;(current Score)
-	LIVES DB "LIVES LEFT","$"
 	TEXT_GAME_OVER_TITLE DB 'GAME OVER','$' 	;text with the game over menu title
 	TEXT_GAME_OVER_PLAY_AGAIN DB 'Press R to play again','$' 	;text with the game over play again message
+	TEXT_SCORE DB 'SCORE','$' ;text with the game over menu title
 	POINTS DB 03h
 	GAME_ACTIVE DB 01h                     		;is the game active? (1 -> Yes, 0 -> No (game over))	
 	CURRENT_SCENE DB 0                   		;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 	
 	;----------------------------TEXT IN MAIN MENU-----------------------------
-	TEXT_MAIN_MENU_TITLE DB 'CAR IDK', '$'
+	TEXT_MAIN_MENU_TITLE DB 'NAGSM - STREET FIGHTER', '$'
 	TEXT_MAIN_MENU_NORMAL DB 'START GAME IN NORMAL MODE - PRESS 1', '$'
 	TEXT_MAIN_MENU_HARD DB 'START GAME IN HARD MODE - PRESS 2', '$'
 	TEXT_MAIN_MENU_QUIT DB 'QUIT THE GAME - PRESS Q OR q', '$'
@@ -65,16 +65,17 @@ CODE SEGMENT PARA 'CODE'
 		POP AX                               ;release the top item from the stack to the AX register
 		POP AX                               ;release the top item from the stack to the AX register
 		;------------------------------
+
+		CALL SET_SCREEN						 ;set video mode and black background 
+
+		CALL DRAW_GRASS_BLOCKS
 		
-		;CALL DRAW_GAME_MAIN_MENU
-		CALL SET_SCREEN						;set the video mode and black background
-		
-		CALL DRAW_GRASS_BLOCKS				;draw the left and the right grass blocks
+		CALL DRAW_GRASS_BLOCKS				 ;draw the left and the right grass blocks
 		
 		;draw stones
-        MOV COLOR, 0Fh						;set color to white
-        CALL STONES							;set the variables to draw the stones
-        
+        MOV COLOR, 0Fh						 ;set color to white
+        CALL STONES							 ;set the variables to DRAW the stones
+ 
 		CALL DRAW_CAR						;draw player's car
        
 		;------------------------------
@@ -100,10 +101,10 @@ CODE SEGMENT PARA 'CODE'
             CALL STONES				;draw black stones to be as if they were erased 
 			
 			CALL RAND_STONES		;draw the stones in new positions to pretend they are moving
-			
+			CALL DRAW_UI
             CALL MOVE_CAR
 			CALL COLLION_STONES
-
+			;CALL UPDATE_SCORE
 			JMP GAME_LOOP
 			
 			SHOW_GAME_OVER:
@@ -112,9 +113,11 @@ CODE SEGMENT PARA 'CODE'
 				CALL DRAW_GRASS_BLOCKS
 				CALL DRAW_CAR
 				JMP GAME_LOOP
+			
 			SHOW_MAIN_MENU:
 				CALL DRAW_GAME_MAIN_MENU
 				; after return from the menu draw required for playing scene
+				CALL SET_SCREEN
 				CALL DRAW_GRASS_BLOCKS
 				CALL DRAW_CAR
 				JMP GAME_LOOP
@@ -208,31 +211,18 @@ CODE SEGMENT PARA 'CODE'
 	DRAW_GRASS_BLOCKS ENDP
 
 	DRAW_UI PROC NEAR
-		
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
 		MOV DH,001h                      ;set row 
-		MOV DL,015h						 ;set column
+		MOV DL,019h						 ;set column
 		MOV BL,00h
 		MOV AL, 04h 
 		INT 10h							 
-		
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,LIVES    			     ;give DX a pointer to the string TEXT_PLAYER_POINTS
+		LEA DX,TEXT_SCORE    			 ;give DX a pointer to the string TEXT_PLAYER_POINTS
 		INT 21h 
-
-		MOV AH,02h                       ;set cursor position
-		MOV BH,00h                       ;set page number
-		MOV DH,001h                      ;set row 
-		MOV DL,01Fh						 ;set column
-		MOV BL,00h
-		MOV AL, 04h 
-		INT 10h							 
-		
-		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,SCORE    				 ;give DX a pointer to the string TEXT_PLAYER_POINTS
-		INT 21h 
-			
+		MOV AX,15
+		CALL PRINT_NUMBER
 		RET
 	DRAW_UI ENDP
 
@@ -591,7 +581,7 @@ CODE SEGMENT PARA 'CODE'
 		RET
 	GAME_OVER ENDP
 
-	;restart ball position to the original position
+	;restart stone position to the original position
 	RESET_STONE_POSITION PROC NEAR        
 		MOV STONE_1_Y, 0007h
 		MOV AX, STONE_1_Y
@@ -677,11 +667,12 @@ CODE SEGMENT PARA 'CODE'
 
 		RET
 	DRAW_GAME_OVER_MENU ENDP
-	; function to draw main menu 
+	
+	;function to draw main menu 
 	DRAW_GAME_MAIN_MENU PROC NEAR
-		CALL SET_SCREEN                ;clear the screen before displaying the menu
+		CALL SET_SCREEN                  ;clear the screen before displaying the menu
 
-;       Shows the menu title
+		;Shows the menu title
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
 		MOV DH,04h                       ;set row 
@@ -691,37 +682,37 @@ CODE SEGMENT PARA 'CODE'
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
 		LEA DX,TEXT_MAIN_MENU_TITLE      ;give DX a pointer 
 		INT 21h  
-;       Shows normal mode option
+		;Shows normal mode option
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,06h                       ;set row 
+		MOV DH,07h                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 		
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,TEXT_MAIN_MENU_NORMAL      ;give DX a pointer 
+		LEA DX,TEXT_MAIN_MENU_NORMAL     ;give DX a pointer 
 		INT 21h  
-;       Shows hard mode option
+		;Shows hard mode option
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,08h                       ;set row 
+		MOV DH,09h                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 		
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
 		LEA DX,TEXT_MAIN_MENU_HARD      ;give DX a pointer 
 		INT 21h  
-;       Shows quit option
+		;Shows quit option
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,0Ah                       ;set row 
+		MOV DH,0Bh                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 		
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
 		LEA DX,TEXT_MAIN_MENU_QUIT      ;give DX a pointer 
 		INT 21h  
-;       Waits for a key press
+		;Waits for a key press
 		READ_USER_INPUT:
 			MOV AH,00h
 			INT 16h
@@ -732,20 +723,26 @@ CODE SEGMENT PARA 'CODE'
 			JE CHANGE_TO_GAME_SCENE_HARD
 			; TODO ADD CLOSE GAME LOGIC
 			jmp READ_USER_INPUT ; unconditional jump to not accept any wrong input
-		; choose hard will perform both code for hard and normal, if normal only execute code for normal and keep speed at the normal[default]
+		
+		;choose hard will perform both code for hard and normal, if normal only execute code for normal and keep speed at the normal[default]
 		CHANGE_TO_GAME_SCENE_HARD:
+			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
 			; the idea of hard here increase how fast the stones moves
 			MOV STONE_1_VELOCITY, 06H 
 			MOV STONE_2_VELOCITY, 08H 
 			MOV STONE_3_VELOCITY, 05H 
+			RET
+
 		CHANGE_TO_GAME_SCENE_NORMAL:
 			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
+			; reset velocity
+			MOV STONE_1_VELOCITY, 04H 
+			MOV STONE_2_VELOCITY, 06H 
+			MOV STONE_3_VELOCITY, 03H 
 
-	; after choose game mode reset screen to make it ready for other scens
-	CALL SET_SCREEN
-
-	RET
+		RET
 	DRAW_GAME_MAIN_MENU ENDP
+	
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
 		MOV AH,00h                   ;set the configuration to video mode
 		MOV AL,02h                   ;choose the video mode
@@ -753,6 +750,44 @@ CODE SEGMENT PARA 'CODE'
 		MOV AH,4Ch                   ;terminate program
 		INT 21h
 	CONCLUDE_EXIT_GAME ENDP
+	
+	PRINT_NUMBER PROC NEAR
+		;takes ax the number
+		mov BX, 10
+    	MOV CX, 0
+		
+		CONSTRUCT_STRING:
+    		MOV DX, 0
+    		DIV BX                          ;divide by ten
+    		; now ax <-- ax/10
+    		;     dx <-- ax % 10
+    		; print dx
+    		; this is one digit, which we have to convert to ASCII
+    		; the print routine uses dx and ax, so let's push ax
+    		; onto the stack. we clear dx at the beginning of the
+    		; loop anyway, so we don't care if we much around with it
+    		PUSH AX
+    		ADD DL, '0'                     ;convert dl to ascii
+    		POP AX                          ;restore ax
+    		PUSH DX                         ;digits are in reversed order, must use stack
+    		INC CX                          ;remember how many digits we pushed to stack
+    		CMP AX, 0                       ;if ax is zero, we can quit
+			JNZ CONSTRUCT_STRING
+
+			MOV AH,02h                       ;set cursor position
+			MOV BH,00h                       ;set page number
+			MOV DH,001h                      ;set row 
+			MOV DL,01Fh						 ;set column
+			INT 10h
+			MOV AH,2                       ;WRITE STRING TO STANDARD OUTPUT	
+		
+		PRINT_STRING:
+    		POP DX                          ;restore digits from last to first
+    		INT 21h                         ;calls DOS Services
+    		LOOP PRINT_STRING
+    	
+		RET
+	PRINT_NUMBER ENDP
 
 CODE ENDS
 END
