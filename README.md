@@ -3,11 +3,13 @@
 
 ## WE'RE IN DEMO BABYYY LESGO
 
-- Main Menu 
-![menu](/assets/game.png)
+- Main Menu  
 
-- game scene ***"for now"*** 
-![menu](/assets/main_menupng.png)
+    ![menu](/assets/main_menupng.png)
+
+- game scene ***"for now"***
+
+    ![game](/assets/game.png)
 
 ## How to run
 
