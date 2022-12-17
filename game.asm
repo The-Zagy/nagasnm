@@ -33,21 +33,22 @@ DATA SEGMENT PARA 'DATA'
     STONE_1_VELOCITY DW 0004h
     STONE_2_VELOCITY DW 0006h
     STONE_3_VELOCITY DW 0003h
-	   
-	TIME_AUX DB 0                        		;variable used when checking if the time has changed
-	SCORE DB '0','$'                  	     	;(current Score)
-	TEXT_GAME_OVER_TITLE DB 'GAME OVER','$' 	;text with the game over menu title
+
+	UPDATE_SCORE_TIME_1 DW 0									;variable used when checking if the time has changed
+	UPDATE_SCORE_TIME_2 DW 0									;variable used when checking if the time has changed
+	TIME_AUX DB 0                        						;variable used when checking if the time has changed
+	SCORE DW 0			               	     					;(current Score)
+	TEXT_GAME_OVER_TITLE DB 'GAME OVER','$' 					;text with the game over menu title
 	TEXT_GAME_OVER_PLAY_AGAIN DB 'Press R to play again','$' 	;text with the game over play again message
-	TEXT_SCORE DB 'SCORE','$' ;text with the game over menu title
-	POINTS DB 03h
-	GAME_ACTIVE DB 01h                     		;is the game active? (1 -> Yes, 0 -> No (game over))	
-	CURRENT_SCENE DB 0                   		;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
+	TEXT_BACK_TO_MENU DB 'Press E to back to the main menu', '$'	
+	TEXT_SCORE DB 'SCORE','$' 									
+	CURRENT_SCENE DB 0                   						;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 	
 	;----------------------------TEXT IN MAIN MENU-----------------------------
 	TEXT_MAIN_MENU_TITLE DB 'NAGSM - STREET FIGHTER', '$'
 	TEXT_MAIN_MENU_NORMAL DB 'START GAME IN NORMAL MODE - PRESS 1', '$'
 	TEXT_MAIN_MENU_HARD DB 'START GAME IN HARD MODE - PRESS 2', '$'
-	TEXT_MAIN_MENU_QUIT DB 'QUIT THE GAME - PRESS Q OR q', '$'
+	TEXT_MAIN_MENU_QUIT DB 'QUIT THE GAME - PRESS Q', '$'
 	;---------------------------------------------------------------------------
 	
 DATA ENDS
@@ -67,8 +68,6 @@ CODE SEGMENT PARA 'CODE'
 		;------------------------------
 
 		CALL SET_SCREEN						 ;set video mode and black background 
-
-		CALL DRAW_GRASS_BLOCKS
 		
 		CALL DRAW_GRASS_BLOCKS				 ;draw the left and the right grass blocks
 		
@@ -86,7 +85,7 @@ CODE SEGMENT PARA 'CODE'
 			JE SHOW_MAIN_MENU
 			
 			; check game state to decide is the game over or not
-			CMP GAME_ACTIVE,00h
+			CMP CURRENT_SCENE, 02h
 			JE SHOW_GAME_OVER
 
 			;get current system time  [CH = hour, CL = minute, DH = seconds, DL = 1/100 sec]
@@ -101,10 +100,14 @@ CODE SEGMENT PARA 'CODE'
             CALL STONES				;draw black stones to be as if they were erased 
 			
 			CALL RAND_STONES		;draw the stones in new positions to pretend they are moving
-			CALL DRAW_UI
-            CALL MOVE_CAR
+			
+			CALL DRAW_SCORE			;draw player's current score
+            INC UPDATE_SCORE_TIME_2
+			CALL UPDATE_SCORE
+
+			CALL MOVE_CAR
 			CALL COLLION_STONES
-			;CALL UPDATE_SCORE
+			
 			JMP GAME_LOOP
 			
 			SHOW_GAME_OVER:
@@ -210,7 +213,7 @@ CODE SEGMENT PARA 'CODE'
 		RET
 	DRAW_GRASS_BLOCKS ENDP
 
-	DRAW_UI PROC NEAR
+	DRAW_SCORE PROC NEAR
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
 		MOV DH,001h                      ;set row 
@@ -219,12 +222,12 @@ CODE SEGMENT PARA 'CODE'
 		MOV AL, 04h 
 		INT 10h							 
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,TEXT_SCORE    			 ;give DX a pointer to the string TEXT_PLAYER_POINTS
+		LEA DX,TEXT_SCORE    			 ;give DX a pointer to the string TEXT_SCORE
 		INT 21h 
-		MOV AX,15
+		MOV AX, SCORE
 		CALL PRINT_NUMBER
 		RET
-	DRAW_UI ENDP
+	DRAW_SCORE ENDP
 
 	;function to remove player car by replacing it with black
 	RESET_PLAYER_CAR PROC NEAR
@@ -294,7 +297,7 @@ CODE SEGMENT PARA 'CODE'
 
 			; DON'T BREAK grass
 			MOV BX, GRASS_BLOCK_WIDTH
-			ADD BX, PLAYER_CAR_WIDTH
+			ADD BX, 5
 			CMP CAR_POS_X, BX
 			JLE CORRECT_LEFT_POS
 
@@ -509,8 +512,6 @@ CODE SEGMENT PARA 'CODE'
 		JNL CHECK_COLLISION_WITH_STONE_2 	;if there's no collision check for stone 2
 		
 		;if it reaches this point stone 1 is colliding with the car
-		;CALL RESET_STONE_POSITION
-		;CALL UPDATE_SCORE
 		CALL GAME_OVER
 		RET
 		
@@ -536,8 +537,6 @@ CODE SEGMENT PARA 'CODE'
 			JNL CHECK_COLLISION_WITH_STONE_3 	;if there's no collision check for stone 3
 
 			;if it reaches this point stone 2 is colliding with the car
-			; CALL RESET_STONE_POSITION
-			; CALL UPDATE_SCORE 
 			CALL GAME_OVER
 			RET
 
@@ -563,59 +562,68 @@ CODE SEGMENT PARA 'CODE'
 			JNL EXIT_COLLISION 	;if there's no collision Exit
 
 			;if it reaches this point stone 3 is colliding with the car
-			; INC POINTS
-			; CALL RESET_STONE_POSITION
-			; CALL UPDATE_SCORE 
 			CALL GAME_OVER
 			RET
 
 		EXIT_COLLISION:
-			;CALL UPDATE_SCORE
 			RET
 
 		RET
 	COLLION_STONES ENDP
 
 	GAME_OVER PROC NEAR
-		MOV GAME_ACTIVE,00h
+		MOV CURRENT_SCENE,02h
 		RET
 	GAME_OVER ENDP
 
-	;restart stone position to the original position
+	;reset stone position to the original position
 	RESET_STONE_POSITION PROC NEAR        
 		MOV STONE_1_Y, 0007h
 		MOV AX, STONE_1_Y
         MOV POS_Y, AX
+		MOV STONE_1_X, 0040h
+		MOV AX, STONE_1_X
+        MOV POS_X, AX
 		CALL DRAW
+
 		MOV STONE_2_Y, 0007h
 		MOV AX, STONE_2_Y
         MOV POS_Y, AX
+		MOV STONE_2_X, 0100h
+		MOV AX, STONE_2_X
+        MOV POS_X, AX
 		CALL DRAW
+
 		MOV STONE_3_Y, 0007h
 		MOV AX, STONE_3_Y
         MOV POS_Y, AX
+		MOV STONE_3_X, 0090h
+		MOV AX, STONE_3_X
+        MOV POS_X, AX
 		CALL DRAW
 		RET
 	RESET_STONE_POSITION ENDP
 
 	UPDATE_SCORE PROC NEAR
-		
-		XOR AX,AX
-		INC POINTS
-		MOV AL,POINTS ;given, for example that P1 -> 2 points => AL,2
-		
-		;now, before printing to the screen, we need to convert the decimal value to the ascii code character 
-		;we can do this by adding 30h (number to ASCII)
-		;and by subtracting 30h (ASCII to number)
-		ADD AL,03h  
-		MOV [SCORE],AL		;AL,'2'
-		
-		
+		MOV AX, UPDATE_SCORE_TIME_2
+		MOV BX, UPDATE_SCORE_TIME_1
+		SUB AX, BX
+		CMP AX, 14h
+		JE UPDATE
 		RET
+
+		UPDATE:
+			MOV AX, UPDATE_SCORE_TIME_2
+			MOV UPDATE_SCORE_TIME_1, AX
+			INC SCORE
+			CALL DRAW_SCORE
+			RET
+
 	UPDATE_SCORE ENDP
 
 	DRAW_GAME_OVER_MENU PROC NEAR        ;draw the game over menu
 		CALL SET_SCREEN                	 ;clear the screen before displaying the menu
+		CALL DRAW_SCORE
 
 		;Shows the menu title
 		MOV AH,02h                       ;set cursor position
@@ -623,11 +631,11 @@ CODE SEGMENT PARA 'CODE'
 		MOV DH,04h                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
-		
+
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
 		LEA DX,TEXT_GAME_OVER_TITLE      ;give DX a pointer 
 		INT 21h  
-	
+ 
 		;Shows the play again message
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
@@ -635,9 +643,20 @@ CODE SEGMENT PARA 'CODE'
 		MOV DL,04h						 ;set column
 		INT 10h							 
 
-		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
-		LEA DX,TEXT_GAME_OVER_PLAY_AGAIN      ;give DX a pointer 
-		INT 21h                          ;print the string
+		MOV AH,09h                       		;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_GAME_OVER_PLAY_AGAIN     	;give DX a pointer 
+		INT 21h                          		;print the string
+				
+		;Shows the back to main menu message
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,0Ch                       ;set row 
+		MOV DL,04h						 ;set column
+		INT 10h							 
+
+		MOV AH,09h                       		;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_BACK_TO_MENU     			;give DX a pointer 
+		INT 21h                          		;print the string
 				
 		;Waits for a key press
 		MOV AH,00h
@@ -648,22 +667,28 @@ CODE SEGMENT PARA 'CODE'
 		JE RESTART_GAME
 		CMP AL,'r'
 		JE RESTART_GAME
-		;If the key is either 'E' or 'e', exit to main menu
-		; CMP AL,'E'
-		; JE EXIT_TO_MAIN_MENU
-		; CMP AL,'e'
-		; JE EXIT_TO_MAIN_MENU
+		; If the key is either 'E' or 'e', exit to main menu
+		CMP AL,'E'
+		JE BACK_TO_MENU
+		CMP AL,'e'
+		JE BACK_TO_MENU
 		RET
 		
 		RESTART_GAME:
 			CALL RESET_STONE_POSITION
-			MOV GAME_ACTIVE,01h
+			MOV CURRENT_SCENE, 01h
+			MOV SCORE, 0
+			MOV UPDATE_SCORE_TIME_1, 0
+			MOV UPDATE_SCORE_TIME_2, 0
 			RET
 
-			; EXIT_TO_MAIN_MENU:
-			; 	MOV GAME_ACTIVE,00h
-			; 	MOV CURRENT_SCENE,00h
-			; 	RET
+		BACK_TO_MENU:
+			CALL RESET_STONE_POSITION
+			MOV CURRENT_SCENE, 00h
+			MOV SCORE, 0
+			MOV UPDATE_SCORE_TIME_1, 0
+			MOV UPDATE_SCORE_TIME_2, 0
+			RET
 
 		RET
 	DRAW_GAME_OVER_MENU ENDP
@@ -712,17 +737,21 @@ CODE SEGMENT PARA 'CODE'
 		MOV AH,09h                       ;WRITE STRING TO STANDARD OUTPUT
 		LEA DX,TEXT_MAIN_MENU_QUIT      ;give DX a pointer 
 		INT 21h  
+		
 		;Waits for a key press
 		READ_USER_INPUT:
 			MOV AH,00h
 			INT 16h
-			; check if the key pressed is '1'
+
 			CMP AL, '1'
 			JE CHANGE_TO_GAME_SCENE_NORMAL
 			CMP AL, '2'
 			JE CHANGE_TO_GAME_SCENE_HARD
-			; TODO ADD CLOSE GAME LOGIC
-			jmp READ_USER_INPUT ; unconditional jump to not accept any wrong input
+			CMP AL, 'Q'
+			JE EXIT_GAME
+			CMP AL, 'q'
+			JE EXIT_GAME
+			JMP READ_USER_INPUT ; unconditional jump to not accept any wrong input
 		
 		;choose hard will perform both code for hard and normal, if normal only execute code for normal and keep speed at the normal[default]
 		CHANGE_TO_GAME_SCENE_HARD:
@@ -739,8 +768,11 @@ CODE SEGMENT PARA 'CODE'
 			MOV STONE_1_VELOCITY, 04H 
 			MOV STONE_2_VELOCITY, 06H 
 			MOV STONE_3_VELOCITY, 03H 
+			RET
 
-		RET
+		EXIT_GAME: 
+			; CALL CONCLUDE_EXIT_GAME
+			RET
 	DRAW_GAME_MAIN_MENU ENDP
 	
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
@@ -749,11 +781,12 @@ CODE SEGMENT PARA 'CODE'
 		INT 10h    		     		 ;execute the configuration 
 		MOV AH,4Ch                   ;terminate program
 		INT 21h
+		RET
 	CONCLUDE_EXIT_GAME ENDP
 	
 	PRINT_NUMBER PROC NEAR
 		;takes ax the number
-		mov BX, 10
+		MOV BX, 10
     	MOV CX, 0
 		
 		CONSTRUCT_STRING:
