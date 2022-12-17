@@ -34,16 +34,19 @@ DATA SEGMENT PARA 'DATA'
     STONE_2_VELOCITY DW 0006h
     STONE_3_VELOCITY DW 0003h
 
-	UPDATE_SCORE_TIME_1 DW 0									;variable used when checking if the time has changed
-	UPDATE_SCORE_TIME_2 DW 0									;variable used when checking if the time has changed
+	CURRENT_SCENE DB 0                   						;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 	TIME_AUX DB 0                        						;variable used when checking if the time has changed
 	SCORE DW 0			               	     					;(current Score)
-	TEXT_GAME_OVER_TITLE DB 'GAME OVER','$' 					;text with the game over menu title
-	TEXT_GAME_OVER_PLAY_AGAIN DB 'Press R to play again','$' 	;text with the game over play again message
-	TEXT_BACK_TO_MENU DB 'Press E to back to the main menu', '$'	
+	UPDATE_SCORE_TIME_1 DW 0									;variable used when checking if the time has changed
+	UPDATE_SCORE_TIME_2 DW 0									;variable used when checking if the time has changed
 	TEXT_SCORE DB 'SCORE','$' 									
-	CURRENT_SCENE DB 0                   						;the index of the current scene (0, main menu) (1,currently playing) (2,gameover)
 	
+	;----------------------------TEXT IN GAME OVER-----------------------------
+	TEXT_GAME_OVER_TITLE DB 'GAME OVER','$' 					;text with the game over menu title
+	TEXT_GAME_OVER_PLAY_AGAIN DB 'PLAY AGAIN - PRESS R','$' 	;text with the game over play again message
+	TEXT_BACK_TO_MENU DB 'BACK TO MAIN MENU - PRESS B', '$'	
+	;---------------------------------------------------------------------------
+
 	;----------------------------TEXT IN MAIN MENU-----------------------------
 	TEXT_MAIN_MENU_TITLE DB 'NAGSM - STREET FIGHTER', '$'
 	TEXT_MAIN_MENU_NORMAL DB 'START GAME IN NORMAL MODE - PRESS 1', '$'
@@ -650,7 +653,7 @@ CODE SEGMENT PARA 'CODE'
 		;Shows the back to main menu message
 		MOV AH,02h                       ;set cursor position
 		MOV BH,00h                       ;set page number
-		MOV DH,0Ch                       ;set row 
+		MOV DH,0Ah                       ;set row 
 		MOV DL,04h						 ;set column
 		INT 10h							 
 
@@ -658,21 +661,39 @@ CODE SEGMENT PARA 'CODE'
 		LEA DX,TEXT_BACK_TO_MENU     			;give DX a pointer 
 		INT 21h                          		;print the string
 				
-		;Waits for a key press
-		MOV AH,00h
-		INT 16h
+		;Shows quit the game message
+		MOV AH,02h                       ;set cursor position
+		MOV BH,00h                       ;set page number
+		MOV DH,0Ch                       ;set row 
+		MOV DL,04h						 ;set column
+		INT 10h							 
 
-		;If the key is either 'R' or 'r', restart the game		
-		CMP AL,'R'
-		JE RESTART_GAME
-		CMP AL,'r'
-		JE RESTART_GAME
-		; If the key is either 'E' or 'e', exit to main menu
-		CMP AL,'E'
-		JE BACK_TO_MENU
-		CMP AL,'e'
-		JE BACK_TO_MENU
-		RET
+		MOV AH,09h                       		;WRITE STRING TO STANDARD OUTPUT
+		LEA DX,TEXT_MAIN_MENU_QUIT     			;give DX a pointer 
+		INT 21h                          		;print the string
+				
+		;Waits for a key press
+		READ_INPUT:
+			MOV AH,00h
+			INT 16h
+
+			;If the key is either 'R' or 'r', restart the game		
+			CMP AL,'R'
+			JE RESTART_GAME
+			CMP AL,'r'
+			JE RESTART_GAME
+			;If the key is either 'B' or 'b', back to main menu
+			CMP AL,'B'
+			JE BACK_TO_MENU
+			CMP AL,'b'
+			JE BACK_TO_MENU
+			;If the key is either 'Q' or 'q', exit the game 
+			CMP AL,'Q'
+			JE QUIT_THE_GAME
+			CMP AL,'q'
+			JE QUIT_THE_GAME
+			
+			JMP READ_INPUT
 		
 		RESTART_GAME:
 			CALL RESET_STONE_POSITION
@@ -690,7 +711,10 @@ CODE SEGMENT PARA 'CODE'
 			MOV UPDATE_SCORE_TIME_2, 0
 			RET
 
-		RET
+		QUIT_THE_GAME:
+			CALL CONCLUDE_EXIT_GAME
+			RET
+
 	DRAW_GAME_OVER_MENU ENDP
 	
 	;function to draw main menu 
@@ -751,8 +775,9 @@ CODE SEGMENT PARA 'CODE'
 			JE EXIT_GAME
 			CMP AL, 'q'
 			JE EXIT_GAME
-			JMP READ_USER_INPUT ; unconditional jump to not accept any wrong input
-		
+			
+			JMP READ_USER_INPUT ; unconditional jump to not accept any wrong input	
+
 		;choose hard will perform both code for hard and normal, if normal only execute code for normal and keep speed at the normal[default]
 		CHANGE_TO_GAME_SCENE_HARD:
 			MOV CURRENT_SCENE, 01H ; scene 1 means playing the game
@@ -771,8 +796,9 @@ CODE SEGMENT PARA 'CODE'
 			RET
 
 		EXIT_GAME: 
-			; CALL CONCLUDE_EXIT_GAME
+			CALL CONCLUDE_EXIT_GAME
 			RET
+		
 	DRAW_GAME_MAIN_MENU ENDP
 	
 	CONCLUDE_EXIT_GAME PROC NEAR     ;goes back to the text mode
