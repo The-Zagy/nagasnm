@@ -1,15 +1,14 @@
 
 # NAGSM
 
-## WE'RE IN DEMO LESGO
+Nagsm is a street fighter like game built in x86 16 bit assembly as a project for Shoubra's Faculty of Engineering Microprocessors course.
 
-- Main Menu  
+## Gameplay
 
-    ![menu](/assets/menu.png)
+You move with A and D to avoid obstacles coming in your way, and gain score the longer you survive.
 
-- game scene ***"for now"***
+    ![gameplay](/assets/ezgif-5-855bdd6f56.gif)
 
-    ![game](/assets/game.png)
 
 ## How to run
 
