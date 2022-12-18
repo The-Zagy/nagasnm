@@ -7,7 +7,7 @@ Nagsm is a street fighter like game built in x86 16 bit assembly as a project fo
 
 You move with A and D to avoid obstacles coming in your way, and gain score the longer you survive.
 
-    ![gameplay](/assets/ezgif-5-855bdd6f56.gif)
+  ![gameplay](/assets/ezgif-5-855bdd6f56.gif)
 
 
 ## How to run
